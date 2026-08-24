@@ -780,6 +780,20 @@ function renderDetail(){
     return url.trim(); 
   }).filter(Boolean);
 
+  console.log('Photos URLs:', photos);
+
+  // Debug: Check each URL
+photos.forEach(function(url, index) {
+  console.log('Photo ' + (index + 1) + ' URL:', url);
+  console.log('Converted URL:', getDirectImageUrl(url));
+  
+  // Test if the image loads
+  var testImg = new Image();
+  testImg.onload = function() { console.log('Photo ' + (index + 1) + ' loads successfully'); };
+  testImg.onerror = function() { console.log('Photo ' + (index + 1) + ' FAILS to load'); };
+  testImg.src = getDirectImageUrl(url);
+});
+  
   // Build the photo gallery HTML
   let photoGalleryHtml = '';
   if (photos.length > 0) {
