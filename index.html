@@ -555,7 +555,8 @@ let state = {
   formData:{}, 
   detailId:null,
   revenueView:'monthly',
-  revenueFilter: { owner: 'All', month: 'All' }  // ADD THIS LINE
+  revenueFilter: { owner: 'All', month: 'All' },
+  expandedOwnerTrail: null
 };
 
 function initBranding(){
@@ -782,17 +783,6 @@ function renderDetail(){
 
   console.log('Photos URLs:', photos);
 
-  // Debug: Check each URL
-photos.forEach(function(url, index) {
-  console.log('Photo ' + (index + 1) + ' URL:', url);
-  console.log('Converted URL:', getDirectImageUrl(url));
-  
-  // Test if the image loads
-  var testImg = new Image();
-  testImg.onload = function() { console.log('Photo ' + (index + 1) + ' loads successfully'); };
-  testImg.onerror = function() { console.log('Photo ' + (index + 1) + ' FAILS to load'); };
-  testImg.src = getDirectImageUrl(url);
-});
   
   // Build the photo gallery HTML
   let photoGalleryHtml = '';
