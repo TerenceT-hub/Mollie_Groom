@@ -556,7 +556,7 @@ let state = {
   detailId:null,
   revenueView:'monthly',
   revenueFilter: { owner: 'All', month: 'All' },
-  expandedOwnerTrail: null
+  expandedOwnerTrail: null  // THIS MUST BE HERE
 };
 
 function initBranding(){
@@ -666,10 +666,8 @@ function showToast(msg){
 }
 function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// Groups records by owner using a trimmed, case-insensitive key, so
-// "Lex", "lex", and "Lex " (stray whitespace/casing from typing on
-// different days) are all treated as the same customer instead of
-// silently splitting into separate rows/trails.
+// ====== ADD THESE FUNCTIONS RIGHT HERE ======
+// Groups records by owner using a trimmed, case-insensitive key
 function ownerKey(name){
   return String(name || 'Unknown').trim().toLowerCase();
 }
@@ -677,6 +675,8 @@ function ownerDisplayName(name){
   var trimmed = String(name || 'Unknown').trim();
   return trimmed || 'Unknown';
 }
+// ====== END OF ADDED FUNCTIONS ======
+
 function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
 
 async function refreshRecords(){
