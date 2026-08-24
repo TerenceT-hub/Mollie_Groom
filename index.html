@@ -1021,16 +1021,16 @@ function renderRevenue(){
   // Sort each owner's trail chronologically, and take the CURRENT balance
   // from the most recent entry — not just whichever record happened to be
   // processed last, which previously gave a wrong (oldest-record) balance.
-  for (var ownerKey in ownerMap) {
-    var trail = ownerMap[ownerKey].packageTrail;
+  for (var ownerMapKey in ownerMap) {
+    var trail = ownerMap[ownerMapKey].packageTrail;
     trail.sort(function(a, b){ return String(a.date).localeCompare(String(b.date)); });
     var lastWithBalance = null;
     for (var ti = trail.length - 1; ti >= 0; ti--) {
       if (trail[ti].balanceAfter !== null) { lastWithBalance = trail[ti]; break; }
     }
     if (lastWithBalance) {
-      ownerMap[ownerKey].packageBalance = lastWithBalance.balanceAfter;
-      ownerMap[ownerKey].packageType = lastWithBalance.packageType || ownerMap[ownerKey].packageType;
+      ownerMap[ownerMapKey].packageBalance = lastWithBalance.balanceAfter;
+      ownerMap[ownerMapKey].packageType = lastWithBalance.packageType || ownerMap[ownerMapKey].packageType;
     }
   }
 
