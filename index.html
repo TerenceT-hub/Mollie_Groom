@@ -497,15 +497,13 @@
       <div class="stamp">犬</div>
       <div>
         <h1>Mollie Pet</h1>
-        <div class="eyebrow"><? if (userRole === 'admin') { ?>Customer &amp; care records<? } else { ?>Your pet's care history<? } ?></div>
+        <div class="eyebrow">Customer &amp; care records</div>
       </div>
     </div>
     <nav class="tabs">
-      <button data-tab="list" class="active"><? if (userRole === 'admin') { ?>All Records<? } else { ?>My Pets<? } ?></button>
-      <? if (userRole === 'admin') { ?>
+      <button data-tab="list" class="active">All Records</button>
       <button data-tab="form">New Record</button>
       <button data-tab="revenue">Revenue</button>
-      <? } ?>
     </nav>
   </div>
 </div>
@@ -516,16 +514,6 @@
 <div id="printArea"></div>
 
 <script>
-/* ======================= USER SESSION (injected by the server) ======================= */
-// These come from Session.getActiveUser().getEmail() on the Apps Script side —
-// the visitor never enters a username or password; Google's own login
-// already verified who they are before this page was ever served.
-const CURRENT_USER_ROLE = <?!= JSON.stringify(userRole) ?>;   // 'admin' or 'customer'
-const CURRENT_USER_OWNER = <?!= JSON.stringify(ownerName) ?>; // set only for customers
-const CURRENT_USER_EMAIL = <?!= JSON.stringify(userEmail) ?>;
-const IS_ADMIN = CURRENT_USER_ROLE === 'admin';
-/* ================================================================ */
-
 /* ======================= CONFIGURATION ======================= */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzk-BoIlqYQ3yhhuaW6TnZG71aggGT6cs6qBX7Cketzx9jqvlvS1vMw9L59OTgOSWPSig/exec";
 
@@ -702,13 +690,6 @@ async function refreshRecords(){
 }
 
 function render(){
-  // Defense in depth: even if something set state.tab to an admin-only view,
-  // a customer never actually renders it. The real enforcement is server-side
-  // (Code.gs rejects writes and only returns their own records regardless);
-  // this just keeps the UI itself consistent with what they're allowed to do.
-  if(!IS_ADMIN && (state.tab === 'form' || state.tab === 'edit' || state.tab === 'revenue')){
-    state.tab = 'list';
-  }
   document.querySelectorAll('nav.tabs button').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab === state.tab || (state.tab==='detail' && b.dataset.tab==='list') || (state.tab==='edit' && b.dataset.tab==='form'));
   });
@@ -746,7 +727,7 @@ function renderList(){
   });
   let html = `<div class="list-toolbar">
     <div class="search-box"><input id="searchInput" type="text" placeholder="Search by dog, owner, or breed…" value="${esc(state.search)}"></div>
-    ${IS_ADMIN ? '<button class="btn" id="newRecordBtn">+ New Record</button>' : ''}
+    <button class="btn" id="newRecordBtn">+ New Record</button>
   </div>`;
   if(filtered.length === 0){
     html += `<div class="card empty-state"><div class="stamp">犬</div>
@@ -844,8 +825,8 @@ photos.forEach(function(url, index) {
       </div>
       <div class="detail-actions">
         <button class="btn secondary" id="exportPdfBtn">Export as PDF</button>
-        ${IS_ADMIN ? `<button class="btn secondary" id="editBtn">Edit</button>
-        <button class="btn danger" id="deleteBtn">Delete</button>` : ''}
+        <button class="btn secondary" id="editBtn">Edit</button>
+        <button class="btn danger" id="deleteBtn">Delete</button>
       </div>
     </div>
     <div class="detail-grid">
