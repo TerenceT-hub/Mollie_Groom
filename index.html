@@ -677,6 +677,7 @@ function ownerDisplayName(name){
   return trimmed || 'Unknown';
 }
 function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function nowTimeStr(){ const d=new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
 
 async function refreshRecords(){
   state.loading = true; render();
@@ -751,7 +752,7 @@ function renderList(){
         <div class="meta">${esc(r['Breed']||'—')} · ${esc(r['Service Required']||'—')}</div>
       </div>
       <div class="flags">${flagHtml}</div>
-      <div class="date">${esc(r['Date of Grooming']||'')}</div>
+      <div class="date">${esc(r['Date of Grooming']||'')}${r['Time of Grooming'] ? `<br><span style="font-size:11px;">${esc(r['Time of Grooming'])}</span>` : ''}</div>
     </div>`;
   }).join('');
   return html;
@@ -821,7 +822,7 @@ photos.forEach(function(url, index) {
     <div class="detail-header">
       <div>
         <h2>${esc(r['Dog Name']||'Unnamed')}</h2>
-        <div class="sub">${esc(r['Owner Name']||'')} · Groomed ${esc(r['Date of Grooming']||'—')}</div>
+        <div class="sub">${esc(r['Owner Name']||'')} · Groomed ${esc(r['Date of Grooming']||'—')}${r['Time of Grooming'] ? ' at ' + esc(r['Time of Grooming']) : ''}</div>
       </div>
       <div class="detail-actions">
         <button class="btn secondary" id="exportPdfBtn">Export as PDF</button>
@@ -873,7 +874,7 @@ photos.forEach(function(url, index) {
               <div class="dog">${esc(h['Service Required']||'Visit')}</div>
               <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
             </div>
-            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges (SGD)'] ? +esc(h['Charges (SGD)']) : ''}</div>
+            <div class="date">${esc(h['Date of Grooming']||'')}${h['Time of Grooming'] ? ' '+esc(h['Time of Grooming']) : ''}${h['Charges (SGD)'] ? +esc(h['Charges (SGD)']) : ''}</div>
           </div>`).join('')}
       </div>`;
     })()}
@@ -999,6 +1000,7 @@ function renderRevenue(){
         ownerMap[owner].packageToppedUp += topUpAmt;
         ownerMap[owner].packageTrail.push({
           date: r['Date of Grooming'] || '',
+          time: r['Time of Grooming'] || '',
           dogName: r['Dog Name'] || '',
           type: 'topup',
           amount: topUpAmt,
@@ -1007,6 +1009,7 @@ function renderRevenue(){
       }
       ownerMap[owner].packageTrail.push({
         date: r['Date of Grooming'] || '',
+        time: r['Time of Grooming'] || '',
         dogName: r['Dog Name'] || '',
         type: 'usage',
         amount: charge,
@@ -1023,7 +1026,7 @@ function renderRevenue(){
   // processed last, which previously gave a wrong (oldest-record) balance.
   for (var ownerMapKey in ownerMap) {
     var trail = ownerMap[ownerMapKey].packageTrail;
-    trail.sort(function(a, b){ return String(a.date).localeCompare(String(b.date)); });
+    trail.sort(function(a, b){ return (String(a.date) + String(a.time)).localeCompare(String(b.date) + String(b.time)); });
     var lastWithBalance = null;
     for (var ti = trail.length - 1; ti >= 0; ti--) {
       if (trail[ti].balanceAfter !== null) { lastWithBalance = trail[ti]; break; }
@@ -1189,7 +1192,7 @@ function renderRevenue(){
                   ${data.packageTrail.map(function(t){
                     var isTopup = t.type === 'topup';
                     return `<tr style="border-top:1px solid var(--line-soft);">
-                      <td style="padding:6px 10px;">${esc(t.date || '—')}</td>
+                      <td style="padding:6px 10px;">${esc(t.date || '—')}${t.time ? ' ' + esc(t.time) : ''}</td>
                       <td style="padding:6px 10px;color:${isTopup ? 'var(--sage)' : 'var(--ink-soft)'};">${isTopup ? '↑ Top Up' : '↓ Used'}</td>
                       <td style="padding:6px 10px;">${esc(t.dogName || '—')}</td>
                       <td style="padding:6px 10px;text-align:right;color:${isTopup ? 'var(--sage)' : 'var(--clay)'};">${isTopup ? '+' : '-'}${t.amount.toFixed(2)}</td>
@@ -1260,7 +1263,7 @@ photoHtml += '</div>';
     '<div class="p-head">' +
       (LOGO_URL ? '<img src="' + esc(LOGO_URL) + '" alt="logo">' : '') +
       '<div class="biz">' + esc(BUSINESS_NAME) + '</div>' +
-      '<div class="doc-title">Grooming Record<br>' + esc(r['Date of Grooming']||'') + '</div>' +
+      '<div class="doc-title">Grooming Record<br>' + esc(r['Date of Grooming']||'') + (r['Time of Grooming'] ? ' ' + esc(r['Time of Grooming']) : '') + '</div>' +
     '</div>' +
     '<h3>Dog &amp; Owner</h3>' +
     '<div class="p-grid">' +
@@ -1448,8 +1451,11 @@ function renderForm(){
   </div>
 </div>
       
-      <div class="row3">
+      <div class="row">
         <div class="field"><label>Date of Grooming</label><input type="date" id="f_Date" value="${esc(d['Date of Grooming']||todayStr())}"></div>
+        <div class="field"><label>Time of Grooming</label><input type="time" id="f_Time" value="${esc(d['Time of Grooming']||nowTimeStr())}"></div>
+      </div>
+      <div class="row">
         <div class="field"><label>Breed</label><input type="text" id="f_Breed" value="${esc(d['Breed'])}" placeholder="e.g. Poodle"></div>
         <div class="field"><label>Weight (kg)</label><input type="number" step="0.1" id="f_Weight" value="${esc(d['Weight (kg)'])}"></div>
       </div>
@@ -2109,6 +2115,7 @@ function collectFormData(){
     'Dog Name':'f_DogName',
     'Owner Name':'f_OwnerName',
     'Date of Grooming':'f_Date',
+    'Time of Grooming':'f_Time',
     'Breed':'f_Breed',
     'Weight (kg)':'f_Weight',
     'Style Notes':'f_StyleNotes',
