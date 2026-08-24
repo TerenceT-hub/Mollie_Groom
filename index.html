@@ -497,13 +497,15 @@
       <div class="stamp">犬</div>
       <div>
         <h1>Mollie Pet</h1>
-        <div class="eyebrow">Customer &amp; care records</div>
+        <div class="eyebrow"><? if (userRole === 'admin') { ?>Customer &amp; care records<? } else { ?>Your pet's care history<? } ?></div>
       </div>
     </div>
     <nav class="tabs">
-      <button data-tab="list" class="active">All Records</button>
+      <button data-tab="list" class="active"><? if (userRole === 'admin') { ?>All Records<? } else { ?>My Pets<? } ?></button>
+      <? if (userRole === 'admin') { ?>
       <button data-tab="form">New Record</button>
       <button data-tab="revenue">Revenue</button>
+      <? } ?>
     </nav>
   </div>
 </div>
@@ -514,6 +516,16 @@
 <div id="printArea"></div>
 
 <script>
+/* ======================= USER SESSION (injected by the server) ======================= */
+// These come from Session.getActiveUser().getEmail() on the Apps Script side —
+// the visitor never enters a username or password; Google's own login
+// already verified who they are before this page was ever served.
+const CURRENT_USER_ROLE = <?!= JSON.stringify(userRole) ?>;   // 'admin' or 'customer'
+const CURRENT_USER_OWNER = <?!= JSON.stringify(ownerName) ?>; // set only for customers
+const CURRENT_USER_EMAIL = <?!= JSON.stringify(userEmail) ?>;
+const IS_ADMIN = CURRENT_USER_ROLE === 'admin';
+/* ================================================================ */
+
 /* ======================= CONFIGURATION ======================= */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzk-BoIlqYQ3yhhuaW6TnZG71aggGT6cs6qBX7Cketzx9jqvlvS1vMw9L59OTgOSWPSig/exec";
 
@@ -555,8 +567,7 @@ let state = {
   formData:{}, 
   detailId:null,
   revenueView:'monthly',
-  revenueFilter: { owner: 'All', month: 'All' },
-  expandedOwnerTrail: null  // THIS MUST BE HERE
+  revenueFilter: { owner: 'All', month: 'All' }  // ADD THIS LINE
 };
 
 function initBranding(){
@@ -666,8 +677,10 @@ function showToast(msg){
 }
 function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// ====== ADD THESE FUNCTIONS RIGHT HERE ======
-// Groups records by owner using a trimmed, case-insensitive key
+// Groups records by owner using a trimmed, case-insensitive key, so
+// "Lex", "lex", and "Lex " (stray whitespace/casing from typing on
+// different days) are all treated as the same customer instead of
+// silently splitting into separate rows/trails.
 function ownerKey(name){
   return String(name || 'Unknown').trim().toLowerCase();
 }
@@ -675,8 +688,6 @@ function ownerDisplayName(name){
   var trimmed = String(name || 'Unknown').trim();
   return trimmed || 'Unknown';
 }
-// ====== END OF ADDED FUNCTIONS ======
-
 function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
 
 async function refreshRecords(){
@@ -691,6 +702,13 @@ async function refreshRecords(){
 }
 
 function render(){
+  // Defense in depth: even if something set state.tab to an admin-only view,
+  // a customer never actually renders it. The real enforcement is server-side
+  // (Code.gs rejects writes and only returns their own records regardless);
+  // this just keeps the UI itself consistent with what they're allowed to do.
+  if(!IS_ADMIN && (state.tab === 'form' || state.tab === 'edit' || state.tab === 'revenue')){
+    state.tab = 'list';
+  }
   document.querySelectorAll('nav.tabs button').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab === state.tab || (state.tab==='detail' && b.dataset.tab==='list') || (state.tab==='edit' && b.dataset.tab==='form'));
   });
@@ -728,7 +746,7 @@ function renderList(){
   });
   let html = `<div class="list-toolbar">
     <div class="search-box"><input id="searchInput" type="text" placeholder="Search by dog, owner, or breed…" value="${esc(state.search)}"></div>
-    <button class="btn" id="newRecordBtn">+ New Record</button>
+    ${IS_ADMIN ? '<button class="btn" id="newRecordBtn">+ New Record</button>' : ''}
   </div>`;
   if(filtered.length === 0){
     html += `<div class="card empty-state"><div class="stamp">犬</div>
@@ -783,6 +801,17 @@ function renderDetail(){
 
   console.log('Photos URLs:', photos);
 
+  // Debug: Check each URL
+photos.forEach(function(url, index) {
+  console.log('Photo ' + (index + 1) + ' URL:', url);
+  console.log('Converted URL:', getDirectImageUrl(url));
+  
+  // Test if the image loads
+  var testImg = new Image();
+  testImg.onload = function() { console.log('Photo ' + (index + 1) + ' loads successfully'); };
+  testImg.onerror = function() { console.log('Photo ' + (index + 1) + ' FAILS to load'); };
+  testImg.src = getDirectImageUrl(url);
+});
   
   // Build the photo gallery HTML
   let photoGalleryHtml = '';
@@ -815,8 +844,8 @@ function renderDetail(){
       </div>
       <div class="detail-actions">
         <button class="btn secondary" id="exportPdfBtn">Export as PDF</button>
-        <button class="btn secondary" id="editBtn">Edit</button>
-        <button class="btn danger" id="deleteBtn">Delete</button>
+        ${IS_ADMIN ? `<button class="btn secondary" id="editBtn">Edit</button>
+        <button class="btn danger" id="deleteBtn">Delete</button>` : ''}
       </div>
     </div>
     <div class="detail-grid">
