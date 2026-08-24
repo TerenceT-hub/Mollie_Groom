@@ -664,6 +664,18 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'), 2200);
 }
 function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Groups records by owner using a trimmed, case-insensitive key, so
+// "Lex", "lex", and "Lex " (stray whitespace/casing from typing on
+// different days) are all treated as the same customer instead of
+// silently splitting into separate rows/trails.
+function ownerKey(name){
+  return String(name || 'Unknown').trim().toLowerCase();
+}
+function ownerDisplayName(name){
+  var trimmed = String(name || 'Unknown').trim();
+  return trimmed || 'Unknown';
+}
 function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
 
 async function refreshRecords(){
@@ -893,8 +905,13 @@ photos.forEach(function(url, index) {
 
 function renderRevenue(){
   // --- FILTERS ---
-  // Get unique owners and months for filter dropdowns
-  var allOwners = [...new Set(state.records.map(function(r) { return r['Owner Name'] || 'Unknown'; }))].sort();
+  // Get unique owners and months for filter dropdowns (deduped by normalized key)
+  var ownerNameByKey = {};
+  state.records.forEach(function(r) {
+    var key = ownerKey(r['Owner Name']);
+    if (!ownerNameByKey[key]) ownerNameByKey[key] = ownerDisplayName(r['Owner Name']);
+  });
+  var allOwners = Object.keys(ownerNameByKey).sort(function(a, b){ return ownerNameByKey[a].localeCompare(ownerNameByKey[b]); });
   var allMonths = [...new Set(state.records.map(function(r) { 
     var dateStr = r['Date of Grooming'] || '';
     return dateStr ? dateStr.slice(0, 7) : null; 
@@ -907,7 +924,7 @@ function renderRevenue(){
 
   // --- FILTER RECORDS ---
   var filteredRecords = state.records.filter(function(r) {
-    var ownerMatch = state.revenueFilter.owner === 'All' || (r['Owner Name'] || 'Unknown') === state.revenueFilter.owner;
+    var ownerMatch = state.revenueFilter.owner === 'All' || ownerKey(r['Owner Name']) === state.revenueFilter.owner;
     var dateStr = r['Date of Grooming'] || '';
     var monthKey = dateStr ? dateStr.slice(0, 7) : null;
     var monthMatch = state.revenueFilter.month === 'All' || monthKey === state.revenueFilter.month;
@@ -949,9 +966,10 @@ function renderRevenue(){
   // --- BUILD OWNER DATA ---
   const ownerMap = {};
   filteredRecords.forEach(function(r) {
-    var owner = r['Owner Name'] || 'Unknown';
+    var owner = ownerKey(r['Owner Name']);
     if (!ownerMap[owner]) {
       ownerMap[owner] = {
+        displayName: ownerDisplayName(r['Owner Name']),
         gross: 0,
         discount: 0,
         net: 0,
@@ -1016,7 +1034,7 @@ function renderRevenue(){
     }
   }
 
-  var owners = Object.keys(ownerMap).sort();
+  var owners = Object.keys(ownerMap).sort(function(a, b){ return ownerMap[a].displayName.localeCompare(ownerMap[b].displayName); });
 
   // --- BUILD HTML ---
   let html = '';
@@ -1027,8 +1045,8 @@ function renderRevenue(){
       <label style="font-size:12px;color:var(--ink-soft);">👤 Owner:</label>
       <select id="ownerFilter" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;font-size:13px;">
         <option value="All" ${state.revenueFilter.owner === 'All' ? 'selected' : ''}>All Owners</option>
-        ${allOwners.map(function(o) {
-          return `<option value="${esc(o)}" ${state.revenueFilter.owner === o ? 'selected' : ''}>${esc(o)}</option>`;
+        ${allOwners.map(function(key) {
+          return `<option value="${esc(key)}" ${state.revenueFilter.owner === key ? 'selected' : ''}>${esc(ownerNameByKey[key])}</option>`;
         }).join('')}
       </select>
     </div>
@@ -1143,7 +1161,7 @@ function renderRevenue(){
         var hasTrail = data.packageTrail.length > 0;
         var isExpanded = state.expandedOwnerTrail === owner;
         html += `<tr class="${hasTrail ? 'owner-trail-toggle' : ''}" data-owner="${esc(owner)}" style="border-bottom:1px solid var(--line-soft);${hasTrail ? 'cursor:pointer;' : ''}">
-          <td style="padding:12px 16px;font-weight:500;">${esc(owner)}${hasTrail ? ' <span style="color:var(--ink-soft);font-size:11px;">' + (isExpanded ? '▾' : '▸') + ' trail</span>' : ''}</td>
+          <td style="padding:12px 16px;font-weight:500;">${esc(data.displayName)}${hasTrail ? ' <span style="color:var(--ink-soft);font-size:11px;">' + (isExpanded ? '▾' : '▸') + ' trail</span>' : ''}</td>
           <td style="padding:12px 16px;text-align:right;">${data.count}</td>
           <td style="padding:12px 16px;text-align:right;">${data.gross.toFixed(2)}</td>
           <td style="padding:12px 16px;text-align:right;color:var(--clay);">${data.discount > 0 ? '-' + data.discount.toFixed(2) : '—'}</td>
@@ -1158,7 +1176,7 @@ function renderRevenue(){
         if(isExpanded && hasTrail){
           html += `<tr><td colspan="10" style="padding:0;background:var(--paper);">
             <div style="padding:14px 20px;">
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Package Trail — ${esc(owner)}</div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Package Trail — ${esc(data.displayName)}</div>
               <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
                 <thead><tr style="text-align:left;color:var(--ink-soft);">
                   <th style="padding:6px 10px;font-weight:500;">Date</th>
@@ -1451,8 +1469,8 @@ function renderForm(){
 
     <div class="section">
       <div class="section-title"><span class="num">03</span><h2>Service &amp; Behavior</h2></div>
-      <div class="field"><label>Service Required</label>${pillGroup(SERVICE, d['Service Required'])}
-        ${d['Service Required']==='Other' ? `<div class="assess-note"><input type="text" id="f_ServiceNotes" placeholder="Describe service" value="${esc(d['Service Notes'])}"></div>` : ''}
+      <div class="field"><label>Service Required</label>${multiPillGroup(SERVICE, d['Service Required'])}
+        ${parseMultiValue(d['Service Required']).includes('Other') ? `<div class="assess-note"><input type="text" id="f_ServiceNotes" placeholder="Describe service" value="${esc(d['Service Notes'])}"></div>` : ''}
       </div>
       <div class="field">
         <label>Pricing</label>
@@ -1809,13 +1827,13 @@ function attachHandlers(){
     }catch(err){ showToast('Could not delete'); console.error(err); }
   };
 
-  // Pill groups (Temperament supports multiple selections)
+  // Pill groups (Temperament and Service Required support multiple selections)
   document.querySelectorAll('.pill-group').forEach(group=>{
     group.querySelectorAll('.pill').forEach(pill=>{
       pill.onclick = ()=>{
         collectFormData();
         const key = group.dataset.key;
-        if(key === 'Temperament'){
+        if(key === 'Temperament' || key === 'Service Required'){
           const current = parseMultiValue(state.formData[key]);
           const value = pill.dataset.value;
           const next = current.includes(value) ? current.filter(v=>v!==value) : [...current, value];
