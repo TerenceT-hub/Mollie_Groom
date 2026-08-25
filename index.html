@@ -1004,7 +1004,12 @@ function renderRevenue(){
           dogName: r['Dog Name'] || '',
           type: 'topup',
           amount: topUpAmt,
-          balanceAfter: null
+          // A top-up updates the record's Package Balance immediately, so it
+          // carries a real balance (and package name) just like a usage entry.
+          // Previously this was left null, which meant a top-up on a new
+          // package could never be picked up as the "latest" package below.
+          balanceAfter: parseFloat(r['Package Balance']) || 0,
+          packageType: r['Package Type'] || ''
         });
       }
       ownerMap[owner].packageTrail.push({
@@ -1018,6 +1023,18 @@ function renderRevenue(){
       });
     } else {
       ownerMap[owner].cashPaid += charge;
+      // No package on this visit — still log it in the trail as a service
+      // breakdown line, so cash-paying owners get an expandable trail too.
+      ownerMap[owner].packageTrail.push({
+        date: r['Date of Grooming'] || '',
+        time: r['Time of Grooming'] || '',
+        dogName: r['Dog Name'] || '',
+        type: 'service',
+        service: r['Service Required'] || '',
+        amount: charge,
+        balanceAfter: null,
+        packageType: ''
+      });
     }
   });
 
@@ -1161,7 +1178,7 @@ function renderRevenue(){
 
       owners.forEach(function(owner) {
         var data = ownerMap[owner];
-        var hasTrail = data.packageTrail.length > 0;
+        var hasTrail = data.packageTrail.length > 0; // now true for every owner with a visit, package or not
         var isExpanded = state.expandedOwnerTrail === owner;
         html += `<tr class="${hasTrail ? 'owner-trail-toggle' : ''}" data-owner="${esc(owner)}" style="border-bottom:1px solid var(--line-soft);${hasTrail ? 'cursor:pointer;' : ''}">
           <td style="padding:12px 16px;font-weight:500;">${esc(data.displayName)}${hasTrail ? ' <span style="color:var(--ink-soft);font-size:11px;">' + (isExpanded ? '▾' : '▸') + ' trail</span>' : ''}</td>
@@ -1185,17 +1202,25 @@ function renderRevenue(){
                   <th style="padding:6px 10px;font-weight:500;">Date</th>
                   <th style="padding:6px 10px;font-weight:500;">Event</th>
                   <th style="padding:6px 10px;font-weight:500;">Dog</th>
+                  <th style="padding:6px 10px;font-weight:500;">Package / Service</th>
                   <th style="padding:6px 10px;font-weight:500;text-align:right;">Amount</th>
                   <th style="padding:6px 10px;font-weight:500;text-align:right;">Balance After</th>
                 </tr></thead>
                 <tbody>
                   ${data.packageTrail.map(function(t){
                     var isTopup = t.type === 'topup';
+                    var isService = t.type === 'service';
+                    var eventLabel = isTopup ? '↑ Top Up' : (isService ? '• Groomed' : '↓ Used');
+                    var eventColor = isTopup ? 'var(--sage)' : (isService ? 'var(--ink)' : 'var(--ink-soft)');
+                    var amountColor = isTopup ? 'var(--sage)' : (isService ? 'var(--ink)' : 'var(--clay)');
+                    var amountSign = isTopup ? '+' : (isService ? '' : '-');
+                    var detail = isService ? (t.service || '—') : (t.packageType || '—');
                     return `<tr style="border-top:1px solid var(--line-soft);">
                       <td style="padding:6px 10px;">${esc(t.date || '—')}${t.time ? ' ' + esc(t.time) : ''}</td>
-                      <td style="padding:6px 10px;color:${isTopup ? 'var(--sage)' : 'var(--ink-soft)'};">${isTopup ? '↑ Top Up' : '↓ Used'}</td>
+                      <td style="padding:6px 10px;color:${eventColor};">${eventLabel}</td>
                       <td style="padding:6px 10px;">${esc(t.dogName || '—')}</td>
-                      <td style="padding:6px 10px;text-align:right;color:${isTopup ? 'var(--sage)' : 'var(--clay)'};">${isTopup ? '+' : '-'}${t.amount.toFixed(2)}</td>
+                      <td style="padding:6px 10px;color:var(--ink-soft);">${esc(detail)}</td>
+                      <td style="padding:6px 10px;text-align:right;color:${amountColor};">${amountSign}${t.amount.toFixed(2)}</td>
                       <td style="padding:6px 10px;text-align:right;font-weight:500;">${t.balanceAfter !== null ? t.balanceAfter.toFixed(2) : '—'}</td>
                     </tr>`;
                   }).join('')}
@@ -1872,6 +1897,12 @@ const creditTopUpInput = document.getElementById('f_CreditTopUp');
 
 if (topUpBtn && creditTopUpInput) {
   topUpBtn.onclick = async function() {
+    // Pull the latest typed values (e.g. Package Type) out of the DOM
+    // and into state.formData BEFORE we mutate anything and re-render —
+    // otherwise render() rebuilds the form from the stale state.formData
+    // and wipes out whatever the groomer just typed but hadn't blurred out of.
+    collectFormData();
+
     const ownerName = state.formData['Owner Name'];
     if (!ownerName) {
       showToast('Please enter an owner name first');
