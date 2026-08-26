@@ -487,9 +487,25 @@
   .print-doc .p-grid div span.k{color:#777;display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;}
   .print-doc .p-charge{display:flex;justify-content:space-between;border-top:2px solid #222;margin-top:16px;padding-top:12px;font-size:16px;font-weight:700;}
   .print-doc .p-footer{margin-top:28px;font-size:11.5px;color:#888;text-align:center;}
+
+.access-gate{position:fixed;inset:0;z-index:9999;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:20px;}
+.access-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:32px 28px;width:100%;max-width:320px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+body.gate-active .topbar, body.gate-active main#app{display:none;}
 </style>
 </head>
 <body>
+
+<div id="accessGate" class="access-gate" style="display:none;">
+  <div class="access-card">
+    <div class="stamp" style="font-family:'Shippori Mincho',serif;font-size:32px;margin-bottom:6px;">犬</div>
+    <div style="font-family:'Shippori Mincho',serif;font-size:18px;margin-bottom:4px;">Mollie Pet</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Enter your access code to continue</div>
+    <input type="text" id="accessCodeInput" placeholder="Access code" autocomplete="off"
+      style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;text-align:center;letter-spacing:.05em;margin-bottom:12px;">
+    <button class="btn" id="accessSubmitBtn" style="width:100%;">Enter</button>
+    <div id="accessError" style="color:var(--clay);font-size:12.5px;margin-top:10px;min-height:16px;"></div>
+  </div>
+</div>
 
 <div class="topbar">
   <div class="topbar-inner">
@@ -510,12 +526,13 @@
 
 <main id="app"></main>
 
+
 <div class="toast" id="toast"></div>
 <div id="printArea"></div>
 
 <script>
 /* ======================= CONFIGURATION ======================= */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8eCW0ACIOBKoZbZF2Gb645tM02XE1qdrBQaV-VqGl7ajAtAgYc8G64hJm5iNt2sgFFQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzk-BoIlqYQ3yhhuaW6TnZG71aggGT6cs6qBX7Cketzx9jqvlvS1vMw9L59OTgOSWPSig/exec";
 
 const BUSINESS_NAME = "Mollie Pet";
 const LOGO_URL = "logo.png";
@@ -574,6 +591,71 @@ function initBranding(){
 }
 
 function configured(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('YOUR_WEB_APP_URL_HERE') === -1; }
+
+/* ======================= ACCESS CODE GATE =======================
+   Blocks the app until a valid code is entered. Codes are checked
+   against a sheet tab (see checkAccessCode action on the Apps Script
+   side) so you can add/remove valid codes without touching this file.
+   Once entered correctly on a device/browser, it's remembered there
+   (localStorage) so the code isn't needed again on that device. */
+const ACCESS_STORAGE_KEY = 'molliepet_access_granted';
+
+function hasAccess(){
+  return localStorage.getItem(ACCESS_STORAGE_KEY) === 'true';
+}
+
+function showAccessGate(){
+  document.body.classList.add('gate-active');
+  const gate = document.getElementById('accessGate');
+  gate.style.display = 'flex';
+
+  const input = document.getElementById('accessCodeInput');
+  const btn = document.getElementById('accessSubmitBtn');
+  const errorEl = document.getElementById('accessError');
+
+  function attempt(){
+    const code = (input.value || '').trim();
+    if(!code){ errorEl.textContent = 'Please enter a code.'; return; }
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    errorEl.textContent = '';
+
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'checkAccessCode', code: code })
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(result){
+      if(result && result.success && result.valid){
+        localStorage.setItem(ACCESS_STORAGE_KEY, 'true');
+        document.body.classList.remove('gate-active');
+        gate.style.display = 'none';
+        bootApp();
+      } else {
+        errorEl.textContent = 'Incorrect code. Please try again.';
+      }
+    })
+    .catch(function(err){
+      console.error('Access code check failed:', err);
+      errorEl.textContent = 'Could not verify code — check your connection.';
+    })
+    .finally(function(){
+      btn.disabled = false;
+      btn.textContent = 'Enter';
+    });
+  }
+
+  btn.onclick = attempt;
+  input.onkeydown = function(e){ if(e.key === 'Enter') attempt(); };
+  input.focus();
+}
+
+function bootApp(){
+  initBranding();
+  render();
+  if(configured()) refreshRecords();
+}
+/* ================================================================ */
 
 async function apiList(){
   const res = await fetch(APPS_SCRIPT_URL + '?action=list');
@@ -1322,7 +1404,7 @@ photoHtml += '</div>';
     '</div>' +
     '<div class="p-charge"><span>Total Charges (SGD)</span><span>' + finalCharge.toFixed(2) + '</span></div>' +
     photoHtml +
-    '<div class="p-footer">' + esc(BUSINESS_NAME) + ' | More than a haircut - A calm and comfortable grooming experience.</div>' +
+    '<div class="p-footer">' + esc(BUSINESS_NAME) + ' @ groomed.by.jen</div>' +
   '</div>';
   
   var imgs = Array.prototype.slice.call(printArea.querySelectorAll('img'));
@@ -2171,9 +2253,11 @@ function collectFormData(){
   });
 }
 
-initBranding();
-render();
-if(configured()) refreshRecords();
+if(hasAccess()){
+  bootApp();
+} else {
+  showAccessGate();
+}
 </script>
 </body>
 </html>
