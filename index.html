@@ -532,7 +532,7 @@ body.gate-active .topbar, body.gate-active main#app{display:none;}
 
 <script>
 /* ======================= CONFIGURATION ======================= */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8eCW0ACIOBKoZbZF2Gb645tM02XE1qdrBQaV-VqGl7ajAtAgYc8G64hJm5iNt2sgFFQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzk-BoIlqYQ3yhhuaW6TnZG71aggGT6cs6qBX7Cketzx9jqvlvS1vMw9L59OTgOSWPSig/exec";
 
 const BUSINESS_NAME = "Mollie Pet";
 const LOGO_URL = "logo.png";
@@ -596,13 +596,8 @@ function configured(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('YOUR_W
    Blocks the app until a valid code is entered. Codes are checked
    against a sheet tab (see checkAccessCode action on the Apps Script
    side) so you can add/remove valid codes without touching this file.
-   Once entered correctly on a device/browser, it's remembered there
-   (localStorage) so the code isn't needed again on that device. */
-const ACCESS_STORAGE_KEY = 'molliepet_access_granted';
-
-function hasAccess(){
-  return localStorage.getItem(ACCESS_STORAGE_KEY) === 'true';
-}
+   No "remember me" — the code is required on every visit, including
+   a plain refresh, since access isn't stored anywhere in the browser. */
 
 function showAccessGate(){
   document.body.classList.add('gate-active');
@@ -627,7 +622,6 @@ function showAccessGate(){
     .then(function(res){ return res.json(); })
     .then(function(result){
       if(result && result.success && result.valid){
-        localStorage.setItem(ACCESS_STORAGE_KEY, 'true');
         document.body.classList.remove('gate-active');
         gate.style.display = 'none';
         bootApp();
@@ -2253,11 +2247,7 @@ function collectFormData(){
   });
 }
 
-if(hasAccess()){
-  bootApp();
-} else {
-  showAccessGate();
-}
+showAccessGate();
 </script>
 </body>
 </html>
