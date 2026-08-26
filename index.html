@@ -490,6 +490,7 @@
 
 .access-gate{position:fixed;inset:0;z-index:9999;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:20px;}
 .access-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:32px 28px;width:100%;max-width:320px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.access-card img.access-logo{width:56px;height:56px;object-fit:contain;margin-bottom:6px;}
 body.gate-active .topbar, body.gate-active main#app{display:none;}
 </style>
 </head>
@@ -497,7 +498,7 @@ body.gate-active .topbar, body.gate-active main#app{display:none;}
 
 <div id="accessGate" class="access-gate" style="display:none;">
   <div class="access-card">
-    <div class="stamp" style="font-family:'Shippori Mincho',serif;font-size:32px;margin-bottom:6px;">犬</div>
+    <div class="stamp" id="accessStamp" style="font-family:'Shippori Mincho',serif;font-size:32px;margin-bottom:6px;">犬</div>
     <div style="font-family:'Shippori Mincho',serif;font-size:18px;margin-bottom:4px;">Mollie Pet</div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Enter your access code to continue</div>
     <input type="text" id="accessCodeInput" placeholder="Access code" autocomplete="off"
@@ -603,6 +604,16 @@ function showAccessGate(){
   document.body.classList.add('gate-active');
   const gate = document.getElementById('accessGate');
   gate.style.display = 'flex';
+
+  // Swap the paw placeholder for the real logo, same as the main header.
+  if(LOGO_URL){
+    const stamp = document.getElementById('accessStamp');
+    const img = document.createElement('img');
+    img.className = 'access-logo';
+    img.src = LOGO_URL;
+    img.alt = BUSINESS_NAME + ' logo';
+    stamp.replaceWith(img);
+  }
 
   const input = document.getElementById('accessCodeInput');
   const btn = document.getElementById('accessSubmitBtn');
