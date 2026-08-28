@@ -1355,16 +1355,19 @@ function exportRecordAsPdf(r){
 
   var photoHtml = '';
   if (photos.length > 0) {
-    photoHtml = '<h3>Photos</h3><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">';
+    photoHtml = '<h3>Photos</h3><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">';
     photos.forEach(function(url, index) {
       var cleanUrl = url.trim();
       if (cleanUrl && !cleanUrl.startsWith('http')) {
         cleanUrl = 'https://' + cleanUrl;
       }
       var displayUrl = getDirectImageUrl(cleanUrl);
-      // In the PDF photo section
-photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;">';
-photoHtml += '<img src="' + esc(displayUrl) + '" style="width:100%;height:150px;object-fit:contain;display:block;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
+      // Fixed 150x150 tile — the actual image inside is sized in JS right
+      // before PDF generation so its aspect ratio is preserved (html2canvas
+      // does not reliably respect the object-fit CSS property, so relying on
+      // that alone stretches/distorts the photo).
+photoHtml += '<div class="pdf-photo-tile" style="width:150px;height:150px;border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
+photoHtml += '<img src="' + esc(displayUrl) + '" style="display:block;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
 photoHtml += '</div>';
     });
     photoHtml += '</div>';
@@ -1435,13 +1438,40 @@ photoHtml += '</div>';
     html2pdf().set(opt).from(docEl).save();
   }
 
+  // html2canvas does not reliably respect the object-fit CSS property, so a
+  // photo styled with width:100%/height:150px + object-fit:contain can come
+  // out stretched/distorted in the exported PDF even though it looks fine on
+  // screen. Instead, once each image has actually loaded (and we know its
+  // real pixel dimensions), compute a "contain" fit inside its 150x150 tile
+  // manually and apply it as literal width/height in px — no object-fit
+  // needed, so there's nothing for html2canvas to get wrong.
+  function fitImageToTile(img){
+    var boxSize = 150;
+    var natW = img.naturalWidth || boxSize;
+    var natH = img.naturalHeight || boxSize;
+    var ratio = natW / natH;
+    var w, h;
+    if (ratio >= 1) { w = boxSize; h = boxSize / ratio; }
+    else { h = boxSize; w = boxSize * ratio; }
+    img.style.width = w + 'px';
+    img.style.height = h + 'px';
+  }
+
+  function waitForImage(img){
+    return new Promise(function(resolve){
+      if (img.complete && img.naturalWidth > 0) { fitImageToTile(img); resolve(); return; }
+      img.onload = function(){ fitImageToTile(img); resolve(); };
+      img.onerror = resolve; // placeholder already handles the broken-image case
+    });
+  }
+
   // Google Drive photo URLs are cross-origin, so html2canvas can't read their
   // pixels directly (the canvas gets silently "tainted" and the photo comes
   // out blank). Route each one through the backend first to get it back as a
   // base64 data URL, which has no cross-origin restriction at all.
   function inlinePhotosThenGenerate(){
     var driveImgs = imgs.filter(function(img){ return img.src.indexOf('drive.google.com') !== -1; });
-    if (driveImgs.length === 0) { generatePdf(); return; }
+    var otherImgs = imgs.filter(function(img){ return img.src.indexOf('drive.google.com') === -1; });
 
     var conversions = driveImgs.map(function(img){
       return fetch(APPS_SCRIPT_URL, {
@@ -1455,11 +1485,14 @@ photoHtml += '</div>';
         }
         // If it fails, leave the original src — the onerror placeholder
         // already in the img tag will show instead of a blank box.
+        return waitForImage(img);
       })
-      .catch(function(){ /* leave original src on network error */ });
+      .catch(function(){ return waitForImage(img); });
     });
 
-    Promise.all(conversions).then(generatePdf);
+    var otherWaits = otherImgs.map(waitForImage);
+
+    Promise.all(conversions.concat(otherWaits)).then(generatePdf);
   }
 
   if (imgs.length === 0) {
