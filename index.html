@@ -471,10 +471,10 @@
     border-radius:10px;
   }
 
-  #printArea{display:none;}
+  #printArea{position:fixed;left:-9999px;top:0;width:680px;background:#fff;}
   @media print{
     body > *:not(#printArea){display:none !important;}
-    #printArea{display:block !important;}
+    #printArea{display:block !important;position:static;left:auto;}
     .toast{display:none !important;}
   }
   .print-doc{max-width:680px;margin:0 auto;font-family:'Zen Kaku Gothic New',sans-serif;color:#222;padding:20px;}
@@ -493,6 +493,7 @@
 .access-card img.access-logo{width:56px;height:56px;object-fit:contain;margin-bottom:6px;}
 body.gate-active .topbar, body.gate-active main#app{display:none;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -1413,11 +1414,32 @@ photoHtml += '</div>';
   '</div>';
   
   var imgs = Array.prototype.slice.call(printArea.querySelectorAll('img'));
+
+  // Build the file name: "Dog Name - 2026-08-26.pdf" (fall back gracefully if fields are missing)
+  var fileNameParts = [r['Dog Name'] || 'Grooming Record', r['Date of Grooming'] || ''].filter(Boolean);
+  var fileName = fileNameParts.join(' - ').replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+
+  function generatePdf(){
+    var docEl = printArea.querySelector('.print-doc');
+    var opt = {
+      margin: 10,
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+    // Generates and downloads the PDF directly — no browser/OS print dialog
+    // involved, so there's no possibility of a browser-injected header/footer
+    // (URL, date, page number) on any device, including iPhone.
+    html2pdf().set(opt).from(docEl).save();
+  }
+
   if (imgs.length === 0) {
-    window.print();
+    generatePdf();
   } else {
     var loaded = 0;
-    var done = function(){ loaded++; if (loaded >= imgs.length) window.print(); };
+    var done = function(){ loaded++; if (loaded >= imgs.length) generatePdf(); };
     imgs.forEach(function(img){
       if (img.complete) done();
       else { img.onload = done; img.onerror = done; }
