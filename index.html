@@ -1435,11 +1435,38 @@ photoHtml += '</div>';
     html2pdf().set(opt).from(docEl).save();
   }
 
+  // Google Drive photo URLs are cross-origin, so html2canvas can't read their
+  // pixels directly (the canvas gets silently "tainted" and the photo comes
+  // out blank). Route each one through the backend first to get it back as a
+  // base64 data URL, which has no cross-origin restriction at all.
+  function inlinePhotosThenGenerate(){
+    var driveImgs = imgs.filter(function(img){ return img.src.indexOf('drive.google.com') !== -1; });
+    if (driveImgs.length === 0) { generatePdf(); return; }
+
+    var conversions = driveImgs.map(function(img){
+      return fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getPhotoBase64', url: img.src })
+      })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if (result && result.success) {
+          img.src = 'data:' + result.mimeType + ';base64,' + result.base64;
+        }
+        // If it fails, leave the original src — the onerror placeholder
+        // already in the img tag will show instead of a blank box.
+      })
+      .catch(function(){ /* leave original src on network error */ });
+    });
+
+    Promise.all(conversions).then(generatePdf);
+  }
+
   if (imgs.length === 0) {
     generatePdf();
   } else {
     var loaded = 0;
-    var done = function(){ loaded++; if (loaded >= imgs.length) generatePdf(); };
+    var done = function(){ loaded++; if (loaded >= imgs.length) inlinePhotosThenGenerate(); };
     imgs.forEach(function(img){
       if (img.complete) done();
       else { img.onload = done; img.onerror = done; }
