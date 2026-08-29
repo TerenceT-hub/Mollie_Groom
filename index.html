@@ -1661,10 +1661,10 @@ function renderForm(){
       ${PRE_ASSESSMENT.map(cat=>`
         <div class="field">
           <label>${esc(cat.label)}</label>
-          ${pillGroup(cat, d[cat.key])}
+          ${multiPillGroup(cat, d[cat.key])}
           <div class="assess-note"><input type="text" id="f_${esc(cat.key)}Notes" placeholder="Notes (optional)" value="${esc(d[cat.key+' Notes'])}"></div>
         </div>`).join('')}
-      <div class="field"><label>Mats</label>${pillGroup(MATS, d['Mats'])}</div>
+      <div class="field"><label>Mats</label>${multiPillGroup(MATS, d['Mats'])}</div>
     </div>
 
     <div class="section">
@@ -2027,13 +2027,15 @@ function attachHandlers(){
     }catch(err){ showToast('Could not delete'); console.error(err); }
   };
 
-  // Pill groups (Temperament and Service Required support multiple selections)
+  // Pill groups — any group rendered via multiPillGroup() carries the
+  // "multi-select" class and toggles values in/out of a comma-joined list;
+  // plain pillGroup() groups stay single-select.
   document.querySelectorAll('.pill-group').forEach(group=>{
     group.querySelectorAll('.pill').forEach(pill=>{
       pill.onclick = ()=>{
         collectFormData();
         const key = group.dataset.key;
-        if(key === 'Temperament' || key === 'Service Required'){
+        if(group.classList.contains('multi-select')){
           const current = parseMultiValue(state.formData[key]);
           const value = pill.dataset.value;
           const next = current.includes(value) ? current.filter(v=>v!==value) : [...current, value];
