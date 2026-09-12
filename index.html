@@ -1863,7 +1863,15 @@ function setupPhotoUpload() {
       const result = await uploadPhotos(state.detailId, files);
       if (result.success) {
         showToast('Photos uploaded successfully!');
-        await refreshRecords();
+        // Append the newly uploaded URLs to the record locally instead of
+        // re-downloading the whole list just to see photos we already have.
+        const idx = state.records.findIndex(x => x['Record ID'] === state.detailId);
+        if(idx !== -1){
+          const existing = (state.records[idx]['Photos'] || '').split(',').filter(Boolean);
+          state.records[idx] = Object.assign({}, state.records[idx], {
+            'Photos': existing.concat(result.urls).join(',')
+          });
+        }
         render();
       } else {
         showToast('Upload failed: ' + result.error);
@@ -1917,7 +1925,8 @@ function setupPhotoUpload() {
       
       await apiUpdate(state.detailId, { 'Photos': updatedPhotos.join(',') });
       showToast('Photo removed');
-      await refreshRecords();
+      const idx = state.records.findIndex(x => x['Record ID'] === state.detailId);
+      if(idx !== -1) state.records[idx] = Object.assign({}, state.records[idx], { 'Photos': updatedPhotos.join(',') });
       render();
     };
   });
@@ -2037,8 +2046,11 @@ function attachHandlers(){
     try{
       await apiDelete(state.detailId);
       showToast('Record deleted');
+      // Remove it from the local list directly instead of re-downloading
+      // everything just to reflect a deletion we already know happened.
+      state.records = state.records.filter(x => x['Record ID'] !== state.detailId);
       state.tab = 'list';
-      await refreshRecords();
+      render();
     }catch(err){ showToast('Could not delete'); console.error(err); }
   };
 
@@ -2129,8 +2141,17 @@ if (topUpBtn && creditTopUpInput) {
       // Clear the top-up input
       creditTopUpInput.value = '';
       
-      // Refresh records and re-render
-      await refreshRecords();
+      // Patch locally instead of re-downloading the whole list
+      if(state.editingId){
+        const idx = state.records.findIndex(x => x['Record ID'] === state.editingId);
+        if(idx !== -1){
+          state.records[idx] = Object.assign({}, state.records[idx], {
+            'Package Balance': newBalance.toFixed(2),
+            'Package Top Up (SGD)': newTopUpTotal.toFixed(2),
+            'Has Package': 'Yes'
+          });
+        }
+      }
       render();
     } catch (err) {
       showToast('Failed to top up credit: ' + err.message);
@@ -2245,14 +2266,23 @@ if (topUpBtn && creditTopUpInput) {
         await apiUpdate(state.editingId, state.formData);
         showToast('Record updated');
         state.detailId = state.editingId;
+        // Patch the record in place instead of re-downloading the whole
+        // list — the server has the same data we just sent it.
+        const idx = state.records.findIndex(x => x['Record ID'] === state.editingId);
+        if(idx !== -1) state.records[idx] = Object.assign({}, state.records[idx], state.formData, { 'Record ID': state.editingId });
       }else{
         result = await apiCreate(state.formData);
         state.editingId = result.id;
         state.detailId = result.id;
         showToast('Record created!');
+        // Add the new record locally instead of re-downloading the whole
+        // list — we already have everything the server just saved.
+        state.records.unshift(Object.assign({}, state.formData, {
+          'Record ID': result.id,
+          'Timestamp': new Date().toISOString()
+        }));
       }
       
-      await refreshRecords();
       state.tab = 'detail';
       render();
     }catch(err){
