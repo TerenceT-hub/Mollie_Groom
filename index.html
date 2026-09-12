@@ -893,9 +893,10 @@ photos.forEach(function(url, index) {
       }
       // Convert to direct image URL for display
       var displayUrl = getDirectImageUrl(cleanUrl);
+      var thumbUrl = getThumbnailUrl(displayUrl, 300);
       return `
         <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
-          <img src="${esc(displayUrl)}" 
+          <img src="${esc(thumbUrl)}" 
                style="width:100%;height:100%;object-fit:cover;" 
                onclick="window.open('${esc(cleanUrl)}', '_blank')" 
                onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
@@ -1590,6 +1591,20 @@ function getDirectImageUrl(url) {
     return 'https://drive.google.com/uc?export=view&id=' + fileId;
   }
   
+  return url;
+}
+
+// Requests a smaller version of a Drive-hosted thumbnail for fast loading
+// in the app's photo gallery (mobile data is much slower to pull large
+// images than a home/office broadband connection). Only affects what's
+// shown inline — tapping a photo still opens the original full-size URL,
+// and the PDF export is untouched since that already fetches full-quality
+// images separately through the backend.
+function getThumbnailUrl(url, size) {
+  if (!url) return url;
+  if (url.indexOf('thumbnail?id=') !== -1) {
+    return url.replace(/sz=w\d+/, 'sz=w' + size);
+  }
   return url;
 }
 
@@ -2342,6 +2357,8 @@ function collectFormData(){
   });
 }
 
+// NOTE: currently bypassing the access code gate for debugging.
+// Switch back to showAccessGate(); once everything is confirmed working.
 bootApp();
 </script>
 </body>
