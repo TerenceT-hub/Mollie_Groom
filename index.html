@@ -874,7 +874,7 @@ function renderDetail(){
   // Debug: Check each URL
 photos.forEach(function(url, index) {
   console.log('Photo ' + (index + 1) + ' URL:', url);
-  console.log('Converted URL:', gurl));
+    console.log('Converted URL:', getDirectImageUrl(url));
   
   // Test if the image loads
   var testImg = new Image();
@@ -1567,7 +1567,34 @@ function getDirectImageUrl(url) {
   if (url.includes('uc?export=view') || url.includes('thumbnail?id=')) {
     return url;
   }
-  // Requests a smaller version of a Drive-hosted thumbnail for fast loading
+  
+  // Extract file ID from various Google Drive URL formats
+  var fileId = null;
+  
+  // Format: /file/d/FILE_ID/view
+  var match = url.match(/\/file\/d\/([-\w]+)/);
+  if (match) fileId = match[1];
+  
+  // Format: /open?id=FILE_ID
+  if (!fileId) {
+    match = url.match(/[?&]id=([-\w]+)/);
+    if (match) fileId = match[1];
+  }
+  
+  // Format: /uc?export=view&id=FILE_ID (already direct)
+  if (!fileId) {
+    match = url.match(/[-\w]{25,}/);
+    if (match) fileId = match[0];
+  }
+  
+  if (fileId) {
+    return 'https://drive.google.com/uc?export=view&id=' + fileId;
+  }
+  
+  return url;
+}
+
+// Requests a smaller version of a Drive-hosted thumbnail for fast loading
 // in the app's photo gallery (mobile data is much slower to pull large
 // images than a home/office broadband connection). Only affects what's
 // shown inline — tapping a photo still opens the original full-size URL,
