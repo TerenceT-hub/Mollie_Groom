@@ -744,6 +744,14 @@ function renderList(){
     if(!q) return true;
     return (String(r['Dog Name']||'').toLowerCase().includes(q)) || (String(r['Owner Name']||'').toLowerCase().includes(q)) || (String(r['Breed']||'').toLowerCase().includes(q));
   });
+  // Sort by the actual grooming date (and time), latest first — not just
+  // insertion order — so an edited or backdated record still lands in the
+  // right place in the list.
+  filtered.sort((a, b) => {
+    const aKey = String(a['Date of Grooming'] || '') + String(a['Time of Grooming'] || '');
+    const bKey = String(b['Date of Grooming'] || '') + String(b['Time of Grooming'] || '');
+    return bKey.localeCompare(aKey);
+  });
   let html = `<div class="list-toolbar">
     <div class="search-box"><input id="searchInput" type="text" placeholder="Search by dog, owner, or breed…" value="${esc(state.search)}"></div>
     <button class="btn" id="newRecordBtn">+ New Record</button>
