@@ -487,27 +487,11 @@
   .print-doc .p-grid div span.k{color:#777;display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;}
   .print-doc .p-charge{display:flex;justify-content:space-between;border-top:2px solid #222;margin-top:16px;padding-top:12px;font-size:16px;font-weight:700;}
   .print-doc .p-footer{margin-top:28px;font-size:11.5px;color:#888;text-align:center;}
-
-.access-gate{position:fixed;inset:0;z-index:9999;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:20px;}
-.access-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:32px 28px;width:100%;max-width:320px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06);}
-.access-card img.access-logo{width:56px;height:56px;object-fit:contain;margin-bottom:6px;}
-body.gate-active .topbar, body.gate-active main#app{display:none;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
-<div id="accessGate" class="access-gate" style="display:none;">
-  <div class="access-card">
-    <div class="stamp" id="accessStamp" style="font-family:'Shippori Mincho',serif;font-size:32px;margin-bottom:6px;">犬</div>
-    <div style="font-family:'Shippori Mincho',serif;font-size:18px;margin-bottom:4px;">Mollie Pet</div>
-    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Enter your access code to continue</div>
-    <input type="text" id="accessCodeInput" placeholder="Access code" autocomplete="off"
-      style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;text-align:center;letter-spacing:.05em;margin-bottom:12px;">
-    <button class="btn" id="accessSubmitBtn" style="width:100%;">Enter</button>
-    <div id="accessError" style="color:var(--clay);font-size:12.5px;margin-top:10px;min-height:16px;"></div>
-  </div>
-</div>
 
 <div class="topbar">
   <div class="topbar-inner">
@@ -534,11 +518,14 @@ body.gate-active .topbar, body.gate-active main#app{display:none;}
 
 <script>
 /* ======================= CONFIGURATION ======================= */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8eCW0ACIOBKoZbZF2Gb645tM02XE1qdrBQaV-VqGl7ajAtAgYc8G64hJm5iNt2sgFFQ/exec";
+const SUPABASE_URL = "https://xjpyhaxjtqthundfoxuv.supabase.co";
+const SUPABASE_KEY = "sb_publishable_lu6BnWlGBiGMyIC1Zep2ag_6YGOVgJv";
 
 const BUSINESS_NAME = "Mollie Pet";
 const LOGO_URL = "logo.png";
 /* ================================================================ */
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const PRE_ASSESSMENT = [
   { key:'Eyes', label:'Eyes', options:[['Normal','ok'],['Redness','warn'],['Discharge','warn'],['Other','neutral']] },
@@ -592,95 +579,42 @@ function initBranding(){
   }
 }
 
-function configured(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('YOUR_WEB_APP_URL_HERE') === -1; }
+function configured(){ return !!SUPABASE_URL && !!SUPABASE_KEY; }
 
-/* ======================= ACCESS CODE GATE =======================
-   Blocks the app until a valid code is entered. Codes are checked
-   against a sheet tab (see checkAccessCode action on the Apps Script
-   side) so you can add/remove valid codes without touching this file.
-   No "remember me" — the code is required on every visit, including
-   a plain refresh, since access isn't stored anywhere in the browser. */
-
-function showAccessGate(){
-  document.body.classList.add('gate-active');
-  const gate = document.getElementById('accessGate');
-  gate.style.display = 'flex';
-
-  // Swap the paw placeholder for the real logo, same as the main header.
-  if(LOGO_URL){
-    const stamp = document.getElementById('accessStamp');
-    const img = document.createElement('img');
-    img.className = 'access-logo';
-    img.src = LOGO_URL;
-    img.alt = BUSINESS_NAME + ' logo';
-    stamp.replaceWith(img);
-  }
-
-  const input = document.getElementById('accessCodeInput');
-  const btn = document.getElementById('accessSubmitBtn');
-  const errorEl = document.getElementById('accessError');
-
-  function attempt(){
-    const code = (input.value || '').trim();
-    if(!code){ errorEl.textContent = 'Please enter a code.'; return; }
-    btn.disabled = true;
-    btn.textContent = 'Checking…';
-    errorEl.textContent = '';
-
-    fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'checkAccessCode', code: code })
-    })
-    .then(function(res){ return res.json(); })
-    .then(function(result){
-      if(result && result.success && result.valid){
-        document.body.classList.remove('gate-active');
-        gate.style.display = 'none';
-        bootApp();
-      } else {
-        errorEl.textContent = 'Incorrect code. Please try again.';
-      }
-    })
-    .catch(function(err){
-      console.error('Access code check failed:', err);
-      errorEl.textContent = 'Could not verify code — check your connection.';
-    })
-    .finally(function(){
-      btn.disabled = false;
-      btn.textContent = 'Enter';
-    });
-  }
-
-  btn.onclick = attempt;
-  input.onkeydown = function(e){ if(e.key === 'Enter') attempt(); };
-  input.focus();
-}
-
-function bootApp(){
-  initBranding();
-  render();
-  if(configured()) refreshRecords();
-}
-/* ================================================================ */
-
+// Every record fetched from Supabase carries the row's real database id as
+// 'Record ID' too, so all the existing render/lookup code (which keys off
+// r['Record ID']) keeps working unchanged.
 async function apiList(){
-  const res = await fetch(APPS_SCRIPT_URL + '?action=list');
-  const json = await res.json();
-  if(!json.success) throw new Error(json.error || 'Failed to load records');
-  return json.records;
+  const { data, error } = await sb.from('records').select('id, data').order('created_at', { ascending: false });
+  if(error) throw new Error(error.message);
+  return data.map(row => Object.assign({}, row.data, { 'Record ID': row.id }));
 }
-async function apiCreate(data){
-  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'create', data}) });
-  return res.json();
+
+async function apiCreate(formData){
+  const { data, error } = await sb.from('records').insert({ data: formData }).select('id').single();
+  if(error) throw new Error(error.message);
+  return { success: true, id: data.id };
 }
-async function apiUpdate(id, data){
-  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'update', id, data}) });
-  return res.json();
+
+// The whole record is stored as one JSON blob, so a partial update (e.g.
+// just the Photos field) has to be merged into the full existing object
+// first, or it would wipe out every other field. We already keep a fresh
+// copy of every record in state.records, so merge against that.
+async function apiUpdate(id, partialData){
+  const existing = state.records.find(r => r['Record ID'] === id) || {};
+  const merged = Object.assign({}, existing, partialData);
+  delete merged['Record ID']; // that's the row id, not a data field
+  const { error } = await sb.from('records').update({ data: merged }).eq('id', id);
+  if(error) throw new Error(error.message);
+  return { success: true };
 }
+
 async function apiDelete(id){
-  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'delete', id}) });
-  return res.json();
+  const { error } = await sb.from('records').delete().eq('id', id);
+  if(error) throw new Error(error.message);
+  return { success: true };
 }
+
 function fileToCompressedDataUrl(file, maxDim, quality){
   maxDim = maxDim || 1600;
   quality = quality || 0.82;
@@ -712,31 +646,17 @@ async function uploadPhotos(recordId, files) {
   for (let i = 0; i < files.length; i++) {
     try {
       const dataUrl = await fileToCompressedDataUrl(files[i]);
-      const base64Data = dataUrl.substring(dataUrl.indexOf(',') + 1);
-      
+      const blob = await (await fetch(dataUrl)).blob();
       const fileExt = files[i].name.split('.').pop().toLowerCase() || 'jpg';
-      
-      const response = await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'uploadPhoto',
-          recordId: recordId,
-          mimeType: 'image/jpeg',
-          fileName: (files[i].name || 'photo').replace(/\.[^.]+$/, '') + '.' + fileExt,
-          data: base64Data
-        })
-      });
-      
-      const result = await response.json();
-      console.log('Upload result:', result);
-      
-      if (!result.success) {
-        return { success: false, error: result.error || 'Upload failed' };
+      const path = `${recordId}/${Date.now()}_${i}.${fileExt}`;
+
+      const { error: upErr } = await sb.storage.from('photos').upload(path, blob, { contentType: 'image/jpeg' });
+      if (upErr) {
+        return { success: false, error: upErr.message };
       }
-      if (result.url) {
-        uploadedUrls.push(result.url);
-        console.log('Uploaded URL:', result.url);
-      }
+
+      const { data: pub } = sb.storage.from('photos').getPublicUrl(path);
+      uploadedUrls.push(pub.publicUrl);
     } catch (err) {
       console.error('Upload error:', err);
       return { success: false, error: err.message || 'Upload failed' };
@@ -744,6 +664,16 @@ async function uploadPhotos(recordId, files) {
   }
   return { success: true, urls: uploadedUrls };
 }
+
+// Extracts a Supabase Storage object's path from its public URL, so we can
+// tell Storage which file to actually delete when a photo is removed.
+function storagePathFromUrl(url){
+  const marker = '/object/public/photos/';
+  const idx = String(url || '').indexOf(marker);
+  if(idx === -1) return null;
+  return url.substring(idx + marker.length);
+}
+
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -796,8 +726,8 @@ function render(){
 
 function configBanner(){
   return `<div class="config-banner">
-    <strong>One step left:</strong> open <code>Code.gs</code>, deploy it as a Web App in Google Apps Script,
-    then paste the Web App URL into <code>APPS_SCRIPT_URL</code> near the top of this file's script.
+    <strong>One step left:</strong> paste your Supabase project URL and API key into
+    <code>SUPABASE_URL</code> and <code>SUPABASE_KEY</code> near the top of this file's script.
   </div>`;
 }
 function emptyConfigState(){
@@ -1466,34 +1396,39 @@ photoHtml += '</div>';
     });
   }
 
-  // Google Drive photo URLs are cross-origin, so html2canvas can't read their
-  // pixels directly (the canvas gets silently "tainted" and the photo comes
-  // out blank). Route each one through the backend first to get it back as a
-  // base64 data URL, which has no cross-origin restriction at all.
-  function inlinePhotosThenGenerate(){
-    var driveImgs = imgs.filter(function(img){ return img.src.indexOf('drive.google.com') !== -1; });
-    var otherImgs = imgs.filter(function(img){ return img.src.indexOf('drive.google.com') === -1; });
+  // Supabase Storage's public URLs are CORS-enabled, so unlike the old
+  // Google Drive links, images can be fetched directly from the browser —
+  // no backend relay needed anymore. We still convert to a data URL first
+  // (rather than relying on html2canvas's own CORS image loading) since
+  // that's the more reliable path across browsers.
+  function urlToDataUrl(url){
+    return fetch(url)
+      .then(function(res){ return res.blob(); })
+      .then(function(blob){
+        return new Promise(function(resolve, reject){
+          const reader = new FileReader();
+          reader.onload = function(){ resolve(reader.result); };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      });
+  }
 
-    var conversions = driveImgs.map(function(img){
-      return fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'getPhotoBase64', url: img.src })
-      })
-      .then(function(res){ return res.json(); })
-      .then(function(result){
-        if (result && result.success) {
-          img.src = 'data:' + result.mimeType + ';base64,' + result.base64;
-        }
-        // If it fails, leave the original src — the onerror placeholder
-        // already in the img tag will show instead of a blank box.
-        return waitForImage(img);
-      })
-      .catch(function(){ return waitForImage(img); });
+  function inlinePhotosThenGenerate(){
+    var conversions = imgs.map(function(img){
+      return urlToDataUrl(img.src)
+        .then(function(dataUrl){
+          img.src = dataUrl;
+          return waitForImage(img);
+        })
+        .catch(function(){
+          // If it fails, leave the original src — the onerror placeholder
+          // already in the img tag will show instead of a blank box.
+          return waitForImage(img);
+        });
     });
 
-    var otherWaits = otherImgs.map(waitForImage);
-
-    Promise.all(conversions.concat(otherWaits)).then(generatePdf);
+    Promise.all(conversions).then(generatePdf);
   }
 
   if (imgs.length === 0) {
@@ -1560,51 +1495,18 @@ function formatMultiValue(val){
   return parseMultiValue(val).join(', ');
 }
 
+// Supabase Storage URLs are already what they are — no Drive-style file-ID
+// extraction or thumbnail-size query params needed. These are kept as
+// simple pass-throughs so the rest of the code (which calls them everywhere)
+// doesn't need to change. Photos are already compressed to a reasonable
+// size client-side before upload (see fileToCompressedDataUrl), so a
+// separate thumbnail size isn't necessary the way it was for full-resolution
+// Drive originals.
 function getDirectImageUrl(url) {
-  if (!url) return url;
-  
-  // Already a direct URL
-  if (url.includes('uc?export=view') || url.includes('thumbnail?id=')) {
-    return url;
-  }
-  
-  // Extract file ID from various Google Drive URL formats
-  var fileId = null;
-  
-  // Format: /file/d/FILE_ID/view
-  var match = url.match(/\/file\/d\/([-\w]+)/);
-  if (match) fileId = match[1];
-  
-  // Format: /open?id=FILE_ID
-  if (!fileId) {
-    match = url.match(/[?&]id=([-\w]+)/);
-    if (match) fileId = match[1];
-  }
-  
-  // Format: /uc?export=view&id=FILE_ID (already direct)
-  if (!fileId) {
-    match = url.match(/[-\w]{25,}/);
-    if (match) fileId = match[0];
-  }
-  
-  if (fileId) {
-    return 'https://drive.google.com/uc?export=view&id=' + fileId;
-  }
-  
   return url;
 }
 
-// Requests a smaller version of a Drive-hosted thumbnail for fast loading
-// in the app's photo gallery (mobile data is much slower to pull large
-// images than a home/office broadband connection). Only affects what's
-// shown inline — tapping a photo still opens the original full-size URL,
-// and the PDF export is untouched since that already fetches full-quality
-// images separately through the backend.
 function getThumbnailUrl(url, size) {
-  if (!url) return url;
-  if (url.indexOf('thumbnail?id=') !== -1) {
-    return url.replace(/sz=w\d+/, 'sz=w' + size);
-  }
   return url;
 }
 
@@ -1923,6 +1825,15 @@ function setupPhotoUpload() {
       const currentPhotos = (r && r['Photos']) ? r['Photos'].split(',').filter(Boolean) : [];
       const updatedPhotos = currentPhotos.filter(u => u !== url);
       
+      // Best-effort: also delete the actual file from Storage. If this
+      // fails (e.g. the URL format changed), we still remove it from the
+      // record either way — an orphaned file is harmless, a broken image
+      // link in the record isn't.
+      const path = storagePathFromUrl(url);
+      if(path){
+        sb.storage.from('photos').remove([path]).catch(err => console.error('Storage delete failed:', err));
+      }
+      
       await apiUpdate(state.detailId, { 'Photos': updatedPhotos.join(',') });
       showToast('Photo removed');
       const idx = state.records.findIndex(x => x['Record ID'] === state.detailId);
@@ -1932,31 +1843,28 @@ function setupPhotoUpload() {
   });
 }
 
-function getOwnerPackageBalance(ownerName) {
-  if (!ownerName) return Promise.resolve(null);
-  console.log('Fetching package balance for owner:', ownerName);
-  return fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'getPackageBalance',
-      ownerName: ownerName
-    })
-  })
-  .then(function(res) { 
-    console.log('Response status:', res.status);
-    return res.json(); 
-  })
-  .then(function(result) {
-    console.log('Package balance result:', result);
-    if (result.success && result.hasPackage) {
-      return result;
-    }
-    return null;
-  })
-  .catch(function(err) {
-    console.error('Error fetching package balance:', err);
-    return null;
-  });
+// Looks up an owner's most recent package info directly from the records
+// already held in state.records — no network call needed, since the app
+// keeps the full list in memory after the initial load.
+function getOwnerPackageInfoLocal(ownerName){
+  if(!ownerName) return null;
+  const target = String(ownerName).trim().toLowerCase();
+  const matches = state.records.filter(r =>
+    String(r['Owner Name'] || '').trim().toLowerCase() === target &&
+    String(r['Has Package'] || '').trim().toLowerCase() === 'yes'
+  );
+  if(matches.length === 0) return null;
+
+  matches.sort((a, b) =>
+    (String(b['Date of Grooming'] || '') + String(b['Time of Grooming'] || ''))
+      .localeCompare(String(a['Date of Grooming'] || '') + String(a['Time of Grooming'] || ''))
+  );
+  const latest = matches[0];
+  return {
+    hasPackage: true,
+    balance: parseFloat(latest['Package Balance']) || 0,
+    packageType: latest['Package Type'] || ''
+  };
 }
 
 // Shared: looks up an owner's package and applies it to state.formData, then re-renders.
@@ -1965,20 +1873,20 @@ function getOwnerPackageBalance(ownerName) {
 // never depends on which field the groomer happens to fill in first.
 function refreshOwnerPackage(ownerName){
   if(!ownerName) return;
-  getOwnerPackageBalance(ownerName).then(function(pkgInfo){
-    if(pkgInfo && pkgInfo.hasPackage){
-      state.formData['Has Package'] = 'Yes';
-      state.formData['Package Type'] = pkgInfo.packageType || '';
-      state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
-      showToast('Package balance loaded: ' + pkgInfo.balance.toFixed(2));
-    } else {
-      state.formData['Has Package'] = 'No';
-      state.formData['Package Balance'] = '';
-      state.formData['Package Type'] = '';
-    }
-    render();
-  });
+  const pkgInfo = getOwnerPackageInfoLocal(ownerName);
+  if(pkgInfo && pkgInfo.hasPackage){
+    state.formData['Has Package'] = 'Yes';
+    state.formData['Package Type'] = pkgInfo.packageType || '';
+    state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
+    showToast('Package balance loaded: ' + pkgInfo.balance.toFixed(2));
+  } else {
+    state.formData['Has Package'] = 'No';
+    state.formData['Package Balance'] = '';
+    state.formData['Package Type'] = '';
+  }
+  render();
 }
+
 
 function attachHandlers(){
   // Tab navigation
@@ -2387,9 +2295,10 @@ function collectFormData(){
   });
 }
 
-// NOTE: currently bypassing the access code gate for debugging.
-// Switch back to showAccessGate(); once everything is confirmed working.
-bootApp();
+// App boots straight into the records list — no access code gate.
+initBranding();
+render();
+if(configured()) refreshRecords();
 </script>
 </body>
 </html>
