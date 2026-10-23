@@ -217,7 +217,7 @@
   .revenue-summary .stat .num.clay {
     color: var(--clay);
   }
-  
+
   .trend-chart-container {
     background:#fff;
     border:1px solid var(--line);
@@ -226,7 +226,7 @@
     overflow-x:auto;
     margin-bottom:24px;
   }
-  
+
   .trend-chart {
     display:flex;
     align-items:flex-end;
@@ -235,7 +235,7 @@
     padding-bottom:30px;
     position:relative;
   }
-  
+
   .trend-chart .bar-wrapper {
     flex:1;
     display:flex;
@@ -244,7 +244,7 @@
     gap:4px;
     min-width:40px;
   }
-  
+
   .trend-chart .bar-stack {
     width:100%;
     display:flex;
@@ -252,7 +252,7 @@
     align-items:center;
     gap:2px;
   }
-  
+
   .trend-chart .bar-discount {
     width:24px;
     background:var(--clay-soft);
@@ -260,7 +260,7 @@
     opacity:0.7;
     transition:height 0.3s ease;
   }
-  
+
   .trend-chart .bar-revenue {
     width:24px;
     background:var(--sage);
@@ -268,12 +268,12 @@
     position:relative;
     transition:height 0.3s ease;
   }
-  
+
   .trend-chart .bar-revenue.small {
     width:32px;
     background:var(--sage-soft);
   }
-  
+
   .trend-chart .bar-value {
     position:absolute;
     top:-20px;
@@ -283,24 +283,24 @@
     color:var(--ink-soft);
     white-space:nowrap;
   }
-  
+
   .trend-chart .bar-label {
     font-size:10px;
     color:var(--ink-soft);
     text-align:center;
     margin-top:4px;
   }
-  
+
   .trend-chart .bar-count {
     font-size:9px;
     color:var(--ink-soft);
   }
-  
+
   .trend-chart .bar-discount-label {
     font-size:8px;
     color:var(--clay);
   }
-  
+
   .trend-legend {
     display:flex;
     gap:16px;
@@ -311,13 +311,13 @@
     padding-top:12px;
     margin-top:8px;
   }
-  
+
   .trend-legend .legend-item {
     display:flex;
     align-items:center;
     gap:4px;
   }
-  
+
   .trend-legend .legend-color {
     display:inline-block;
     width:12px;
@@ -325,47 +325,47 @@
     border-radius:2px;
     vertical-align:middle;
   }
-  
+
   .trend-legend .legend-color.sage {
     background:var(--sage);
   }
-  
+
   .trend-legend .legend-color.clay {
     background:var(--clay-soft);
   }
-  
+
   .daily-grid {
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:10px;
     margin-bottom:24px;
   }
-  
+
   @media(max-width:640px) {
     .daily-grid {
       grid-template-columns:1fr;
     }
   }
-  
+
   .daily-card {
     background:#fff;
     border:1px solid var(--line);
     border-radius:var(--radius);
     padding:14px 16px;
   }
-  
+
   .daily-card .date-label {
     font-weight:500;
     font-size:13px;
     margin-bottom:4px;
   }
-  
+
   .daily-card .revenue-row {
     display:flex;
     justify-content:space-between;
     font-size:13px;
   }
-  
+
   .daily-card .discount-row {
     display:flex;
     justify-content:space-between;
@@ -373,19 +373,19 @@
     color:var(--clay);
     margin-top:2px;
   }
-  
+
   .daily-card .no-discount {
     font-size:11px;
     color:var(--ink-soft);
     margin-top:2px;
   }
-  
+
   .daily-card .dog-list {
     margin-top:6px;
     font-size:11px;
     color:var(--ink-soft);
   }
-  
+
   .section-header {
     font-family:'Shippori Mincho',serif;
     font-size:16px;
@@ -552,13 +552,13 @@ const SHAMPOOS = [
   { name:'Other', desc:'' },
 ];
 
-let state = { 
-  tab:'list', 
-  records:[], 
-  loading:false, 
-  search:'', 
-  editingId:null, 
-  formData:{}, 
+let state = {
+  tab:'list',
+  records:[],
+  loading:false,
+  search:'',
+  editingId:null,
+  formData:{},
   detailId:null,
   revenueView:'monthly',
   revenueFilter: { owner: 'All', month: 'All' }  // ADD THIS LINE
@@ -802,9 +802,9 @@ function renderDetail(){
       ${val ? chips : 'Not recorded'}
     </div></div>`;
   }
-  
-  const photos = (r['Photos'] || '').split(',').map(function(url) { 
-    return url.trim(); 
+
+  const photos = (r['Photos'] || '').split(',').map(function(url) {
+    return url.trim();
   }).filter(Boolean);
 
   console.log('Photos URLs:', photos);
@@ -813,14 +813,14 @@ function renderDetail(){
 photos.forEach(function(url, index) {
   console.log('Photo ' + (index + 1) + ' URL:', url);
   console.log('Converted URL:', getDirectImageUrl(url));
-  
+
   // Test if the image loads
   var testImg = new Image();
   testImg.onload = function() { console.log('Photo ' + (index + 1) + ' loads successfully'); };
   testImg.onerror = function() { console.log('Photo ' + (index + 1) + ' FAILS to load'); };
   testImg.src = getDirectImageUrl(url);
 });
-  
+
   // Build the photo gallery HTML
   let photoGalleryHtml = '';
   if (photos.length > 0) {
@@ -834,9 +834,9 @@ photos.forEach(function(url, index) {
       var thumbUrl = getThumbnailUrl(displayUrl, 300);
       return `
         <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
-          <img src="${esc(thumbUrl)}" 
-               style="width:100%;height:100%;object-fit:cover;" 
-               onclick="window.open('${esc(cleanUrl)}', '_blank')" 
+          <img src="${esc(thumbUrl)}"
+               style="width:100%;height:100%;object-fit:cover;"
+               onclick="window.open('${esc(cleanUrl)}', '_blank')"
                onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
           <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
           <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
@@ -912,7 +912,7 @@ photos.forEach(function(url, index) {
           💡 <strong>Note:</strong> Please save the record first before uploading photos. Maximum 5 photos.
         </div>
       </div>
-      
+
       <div class="photo-upload-area" id="photoUploadArea">
         <div style="font-size:32px;">📷</div>
         <div style="font-size:13px;color:var(--ink-soft);margin:8px 0;">Click or drag photos here</div>
@@ -920,7 +920,7 @@ photos.forEach(function(url, index) {
         <div class="upload-progress">Uploading...</div>
         <input type="file" id="photoInput" multiple accept="image/*" style="display:none;">
       </div>
-      
+
       <div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
         ${photoGalleryHtml}
       </div>
@@ -940,11 +940,11 @@ function renderRevenue(){
     if (!ownerNameByKey[key]) ownerNameByKey[key] = ownerDisplayName(r['Owner Name']);
   });
   var allOwners = Object.keys(ownerNameByKey).sort(function(a, b){ return ownerNameByKey[a].localeCompare(ownerNameByKey[b]); });
-  var allMonths = [...new Set(state.records.map(function(r) { 
+  var allMonths = [...new Set(state.records.map(function(r) {
     var dateStr = r['Date of Grooming'] || '';
-    return dateStr ? dateStr.slice(0, 7) : null; 
+    return dateStr ? dateStr.slice(0, 7) : null;
   }).filter(Boolean))].sort().reverse();
-  
+
   // Initialize filter state if not exists
   if (!state.revenueFilter) {
     state.revenueFilter = { owner: 'All', month: 'All' };
@@ -1016,7 +1016,7 @@ function renderRevenue(){
     var discountAmt = Math.max(0, gross - charge);
     var isPackage = r['Has Package'] === 'Yes';
     var topUpAmt = parseFloat(r['Package Top Up (SGD)']) || 0;
-    
+
     ownerMap[owner].gross += gross;
     ownerMap[owner].discount += discountAmt;
     ownerMap[owner].net += charge;
@@ -1274,15 +1274,15 @@ function exportRecordAsPdf(r){
     return val || '—';
   }
   var printArea = document.getElementById('printArea');
-  
+
   var basePrice = parseFloat(r['Base Price (SGD)']) || 0;
   var discount = parseFloat(r['Discount (%)']) || 0;
   var finalCharge = parseFloat(r['Charges (SGD)']) || 0;
-  
+
   if (!r['Charges (SGD)'] && basePrice > 0) {
     finalCharge = basePrice * (1 - discount / 100);
   }
-  
+
   var photos = [];
   if (r['Photos']) {
     if (typeof r['Photos'] === 'string') {
@@ -1313,7 +1313,7 @@ photoHtml += '</div>';
   } else {
     photoHtml = '<p style="color:#999;font-size:12px;">No photos attached</p>';
   }
-  
+
   printArea.innerHTML = '<div class="print-doc">' +
     '<div class="p-head">' +
       (LOGO_URL ? '<img src="' + esc(LOGO_URL) + '" alt="logo">' : '') +
@@ -1330,9 +1330,9 @@ photoHtml += '</div>';
     '</div>' +
     '<h3>Service Notes</h3>' +
     '<div class="p-grid">' +
-      row('Service Required', r['Service Required']) +
-      row('Temperament', formatMultiValue(r['Temperament'])) +
-      row('Shampoo Used', formatMultiValue(r['Shampoo Used'])) +
+      row('Service Required', formatMultiValue(r['Service Required']) + (parseMultiValue(r['Service Required']).includes('Other') && r['Service Notes'] ? ' — ' + r['Service Notes'] : '')) +
+      row('Temperament', formatMultiValue(r['Temperament']) + (parseMultiValue(r['Temperament']).includes('Other') && r['Temperament Notes'] ? ' — ' + r['Temperament Notes'] : '')) +
+      row('Shampoo Used', formatMultiValue(r['Shampoo Used']) + (parseMultiValue(r['Shampoo Used']).includes('Other') && r['Shampoo Notes'] ? ' — ' + r['Shampoo Notes'] : '')) +
     '</div>' +
     '<h3>Pre-Assessment</h3>' +
     '<div class="p-grid">' +
@@ -1354,7 +1354,7 @@ photoHtml += '</div>';
     photoHtml +
     '<div class="p-footer">' + esc(BUSINESS_NAME) + ' @ groomed.by.jen</div>' +
   '</div>';
-  
+
   var imgs = Array.prototype.slice.call(printArea.querySelectorAll('img'));
 
   // Build the file name: "Dog Name - 2026-08-26.pdf" (fall back gracefully if fields are missing)
@@ -1531,7 +1531,7 @@ function renderForm(){
       <datalist id="dogDatalist">${uniqueDogNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
       <datalist id="ownerDatalist">${uniqueOwnerNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
       ${renderVisitHistoryBox(d['Dog Name'], d['Owner Name'])}
-      
+
       <!-- PACKAGE SECTION -->
 <div class="field" style="border-top:1px solid var(--line-soft);padding-top:16px;margin-top:16px;">
   <label style="font-weight:500;font-size:13px;color:var(--ink);">Package / Credit</label>
@@ -1548,7 +1548,7 @@ function renderForm(){
       <input type="text" id="f_PackageType" value="${esc(d['Package Type'] || '')}" placeholder="e.g. 5 Grooming Package">
     </div>
   </div>
-  
+
   <!-- PACKAGE BALANCE - DISPLAY ONLY (READ-ONLY) -->
   <div class="row" style="margin-top:10px;">
     <div class="field" style="margin-bottom:0;">
@@ -1569,7 +1569,7 @@ function renderForm(){
     </div>
   </div>
 </div>
-      
+
       <div class="row">
         <div class="field"><label>Date of Grooming</label><input type="date" id="f_Date" value="${esc(d['Date of Grooming']||todayStr())}"></div>
         <div class="field"><label>Time of Grooming</label><input type="time" id="f_Time" value="${esc(d['Time of Grooming']||nowTimeStr())}"></div>
@@ -1726,49 +1726,49 @@ function setupPricingHandlers(){
 function setupPhotoUpload() {
   const uploadArea = document.getElementById('photoUploadArea');
   const fileInput = document.getElementById('photoInput');
-  
+
   if (!uploadArea || !fileInput) return;
-  
+
   uploadArea.onclick = () => {
     if (!state.detailId) {
       showToast('Please save the record first before uploading photos');
       return;
     }
-    
+
     const r = state.records.find(x => x['Record ID'] === state.detailId);
     const currentPhotos = (r && r['Photos']) ? r['Photos'].split(',').filter(Boolean) : [];
     if (currentPhotos.length >= 5) {
       showToast('Maximum 5 photos allowed');
       return;
     }
-    
+
     fileInput.click();
   };
-  
+
   fileInput.onchange = async () => {
     if (fileInput.files.length === 0) return;
-    
+
     if (!state.detailId) {
       showToast('Please save the record first');
       fileInput.value = '';
       return;
     }
-    
+
     const r = state.records.find(x => x['Record ID'] === state.detailId);
     const currentPhotos = (r && r['Photos']) ? r['Photos'].split(',').filter(Boolean) : [];
     const remainingSlots = 5 - currentPhotos.length;
-    
+
     if (fileInput.files.length > remainingSlots) {
       showToast(`You can only upload ${remainingSlots} more photo${remainingSlots > 1 ? 's' : ''}`);
       fileInput.value = '';
       return;
     }
-    
+
     const files = Array.from(fileInput.files);
-    
+
     uploadArea.classList.add('uploading');
     showToast(`Uploading ${files.length} photo${files.length > 1 ? 's' : ''}...`);
-    
+
     try {
       const result = await uploadPhotos(state.detailId, files);
       if (result.success) {
@@ -1790,24 +1790,24 @@ function setupPhotoUpload() {
       showToast('Upload failed. Please try again.');
       console.error(err);
     }
-    
+
     uploadArea.classList.remove('uploading');
     fileInput.value = '';
   };
-  
+
   uploadArea.ondragover = (e) => {
     e.preventDefault();
     uploadArea.classList.add('dragover');
   };
-  
+
   uploadArea.ondragleave = () => {
     uploadArea.classList.remove('dragover');
   };
-  
+
   uploadArea.ondrop = async (e) => {
     e.preventDefault();
     uploadArea.classList.remove('dragover');
-    
+
     if (e.dataTransfer.files.length > 0) {
       if (!state.detailId) {
         showToast('Please save the record first before uploading photos');
@@ -1817,22 +1817,22 @@ function setupPhotoUpload() {
       fileInput.onchange();
     }
   };
-  
+
   document.querySelectorAll('.remove-btn').forEach(btn => {
     btn.onclick = async (e) => {
       e.stopPropagation();
       const url = btn.dataset.url;
       if (!confirm('Remove this photo?')) return;
-      
+
       if (!state.detailId) {
         showToast('Please save the record first');
         return;
       }
-      
+
       const r = state.records.find(x => x['Record ID'] === state.detailId);
       const currentPhotos = (r && r['Photos']) ? r['Photos'].split(',').filter(Boolean) : [];
       const updatedPhotos = currentPhotos.filter(u => u !== url);
-      
+
       // Best-effort: also delete the actual file from Storage. If this
       // fails (e.g. the URL format changed), we still remove it from the
       // record either way — an orphaned file is harmless, a broken image
@@ -1841,7 +1841,7 @@ function setupPhotoUpload() {
       if(path){
         sb.storage.from('photos').remove([path]).catch(err => console.error('Storage delete failed:', err));
       }
-      
+
       await apiUpdate(state.detailId, { 'Photos': updatedPhotos.join(',') });
       showToast('Photo removed');
       const idx = state.records.findIndex(x => x['Record ID'] === state.detailId);
@@ -1913,8 +1913,8 @@ function attachHandlers(){
   // Search input handler
   const searchInput = document.getElementById('searchInput');
   if(searchInput){
-    searchInput.oninput = (e)=>{ 
-      state.search = e.target.value; 
+    searchInput.oninput = (e)=>{
+      state.search = e.target.value;
       const app = document.getElementById('app');
       if(state.tab === 'list') {
         app.innerHTML = renderList();
@@ -2022,28 +2022,28 @@ if (topUpBtn && creditTopUpInput) {
       showToast('Please enter an owner name first');
       return;
     }
-    
+
     const topUpAmount = parseFloat(creditTopUpInput.value);
     if (!topUpAmount || topUpAmount <= 0) {
       showToast('Please enter a valid top-up amount');
       return;
     }
-    
+
     const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
     const newBalance = currentBalance + topUpAmount;
     const priorTopUp = parseFloat(state.formData['Package Top Up (SGD)']) || 0;
     const newTopUpTotal = priorTopUp + topUpAmount;
-    
+
     // Update the balance in the form
     state.formData['Package Balance'] = newBalance.toFixed(2);
     state.formData['Package Top Up (SGD)'] = newTopUpTotal.toFixed(2);
     state.formData['Has Package'] = 'Yes'; // Auto-enable package
-    
+
     // Save the update to the backend immediately
     try {
       // If there's an existing record, update it
       if (state.editingId) {
-        await apiUpdate(state.editingId, { 
+        await apiUpdate(state.editingId, {
           'Package Balance': newBalance.toFixed(2),
           'Package Top Up (SGD)': newTopUpTotal.toFixed(2),
           'Has Package': 'Yes'
@@ -2053,10 +2053,10 @@ if (topUpBtn && creditTopUpInput) {
         // For new records, just update the form
         showToast('Credit added! Balance: ' + newBalance.toFixed(2) + ' (Save record to keep)');
       }
-      
+
       // Clear the top-up input
       creditTopUpInput.value = '';
-      
+
       // Patch locally instead of re-downloading the whole list
       if(state.editingId){
         const idx = state.records.findIndex(x => x['Record ID'] === state.editingId);
@@ -2075,7 +2075,7 @@ if (topUpBtn && creditTopUpInput) {
     }
   };
 }
-  
+
   // Shampoo options
   document.querySelectorAll('.shampoo-option').forEach(opt=>{
     opt.onclick = ()=>{
@@ -2090,15 +2090,15 @@ if (topUpBtn && creditTopUpInput) {
 
   // Setup pricing handlers
   setupPricingHandlers();
-  
+
   // Setup photo upload
   setupPhotoUpload();
 
   // Cancel button
   const cancelBtn = document.getElementById('cancelFormBtn');
-  if(cancelBtn) cancelBtn.onclick = function(){ 
-    state.tab = state.editingId ? 'detail' : 'list'; 
-    render(); 
+  if(cancelBtn) cancelBtn.onclick = function(){
+    state.tab = state.editingId ? 'detail' : 'list';
+    render();
   };
 
   // Dog name change - fill history, and check package if this reveals a new owner
@@ -2146,18 +2146,18 @@ if (topUpBtn && creditTopUpInput) {
   const saveBtn = document.getElementById('saveFormBtn');
   if(saveBtn) saveBtn.onclick = async ()=>{
     collectFormData();
-    
-    if(!state.formData['Dog Name']){ 
-      showToast('Please enter a dog name'); 
-      return; 
+
+    if(!state.formData['Dog Name']){
+      showToast('Please enter a dog name');
+      return;
     }
-    
+
     // Calculate final charges
     const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
     const discount = parseFloat(state.formData['Discount (%)']) || 0;
     const finalCharge = basePrice * (1 - discount / 100);
     state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
-    
+
     // Check package balance if package is selected
     if (state.formData['Has Package'] === 'Yes') {
       const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
@@ -2172,10 +2172,10 @@ if (topUpBtn && creditTopUpInput) {
         showToast('Package balance updated: ' + newBalance.toFixed(2));
       }
     }
-    
-    saveBtn.textContent = 'Saving…'; 
+
+    saveBtn.textContent = 'Saving…';
     saveBtn.disabled = true;
-    
+
     try{
       let result;
       if(state.editingId){
@@ -2198,13 +2198,13 @@ if (topUpBtn && creditTopUpInput) {
           'Timestamp': new Date().toISOString()
         }));
       }
-      
+
       state.tab = 'detail';
       render();
     }catch(err){
       showToast('Could not save — check connection');
       console.error(err);
-      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
+      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record';
       saveBtn.disabled = false;
     }
   };
@@ -2294,7 +2294,7 @@ function collectFormData(){
     'Package Balance':'f_PackageBalance'
     // Note: Credit Top Up is handled separately, not saved directly
   };
-  PRE_ASSESSMENT.forEach(cat=>{ 
+  PRE_ASSESSMENT.forEach(cat=>{
     map[cat.key+' Notes'] = 'f_'+cat.key+'Notes';
   });
   Object.entries(map).forEach(([k,id])=>{
